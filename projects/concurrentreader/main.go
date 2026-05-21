@@ -13,7 +13,7 @@ var wg sync.WaitGroup
 func main() {
 	wg.Add(3)
 
-	go Read("file2.txt")
+	go Read("file1.txt")
 	go Read("file2.txt")
 	go Read("file3.txt")
 
@@ -54,9 +54,6 @@ func Read(file string) {
 			wordCount += len(strings.Fields(line))
 			charCount += len([]rune(line))
 		}
-		fmt.Println("Lines are :", count)
-		fmt.Println("Characters are :", charCount)
-		fmt.Println("Words are :", wordCount)
+		fmt.Println("The Number of lines are ", count, " and the words are ", wordCount, " and the CHaracters used are ", charCount)
 	}
-
 }

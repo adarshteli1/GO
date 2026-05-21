@@ -5,30 +5,41 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"sync"
 )
 
+var wg sync.WaitGroup
+
 func main() {
+	wg.Add(3)
 
-	Read("file1.txt")
-	// files := []string{
-	// 	"file1.txt",
-	// 	"file2.txt",
-	// 	"file3.txt",
-	// }
+	go Read("file2.txt")
+	go Read("file2.txt")
+	go Read("file3.txt")
 
-	// for _, file := range files {
-	// 	file, err := os.Open(file)
-	// 	if err != nil {
-	// 		fmt.Println("Error ", err)
-	// 	} else {
-	// 		fmt.Println("All Good")
-	// 	}
+	wg.Wait()
 
-	// 	Read(file)
-	// }
+	//The Below COde was Sending File one By One
+	/*files := []string{
+		"file1.txt",
+		"file2.txt",
+		"file3.txt",
+	}
+
+	for _, file := range files {
+		file, err := os.Open(file)
+		if err != nil {
+			fmt.Println("Error ", err)
+		} else {
+			fmt.Println("All Good")
+		}
+
+		Read(file)
+	}*/
 }
 
 func Read(file string) {
+	defer wg.Done()
 	charCount := 0
 	wordCount := 0
 	count := 0
@@ -48,10 +59,4 @@ func Read(file string) {
 		fmt.Println("Words are :", wordCount)
 	}
 
-}
-
-type Reader struct {
-	Lines int
-	Words int
-	Char  int
 }

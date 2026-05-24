@@ -1,7 +1,7 @@
 package main
 
 import (
-	routes "JWTAUTH/routes"
+	"JWTAUTH/routes"
 	"os"
 
 	"github.com/gin-gonic/gin"

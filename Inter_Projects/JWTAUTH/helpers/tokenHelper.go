@@ -69,28 +69,29 @@ func GenerateAllTokens(email string, firstname string, lastname string, uid stri
 		},
 	}
 	token, err := jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString([]byte(SECRET_KEY))
-	refreshoken, err := jwt.NewWithClaims(jwt.SigningMethodHS256, refreshClaims).SignedString([]byte(SECRET_KEY))
+	refreshtoken, err := jwt.NewWithClaims(jwt.SigningMethodHS256, refreshClaims).SignedString([]byte(SECRET_KEY))
 
 	if err != nil {
 		log.Panic(err)
 		return
 	}
 
-	return token, refreshoken, err
+	return token, refreshtoken, err
 }
 
 func UpdateAllTokens(signedToken string, signedRefreshToken string, userId string) {
 	var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
+	defer cancel()
 	var updateObj primitive.D
 
 	updateObj = append(updateObj, bson.E{Key: "token", Value: signedToken})
-	updateObj = append(updateObj, bson.E{Key: "refreshToken", Value: signedRefreshToken})
+	updateObj = append(updateObj, bson.E{Key: "refresh_token", Value: signedRefreshToken})
 
 	Updated_at, _ := time.Parse(time.RFC3339, time.Now().Format(time.RFC3339))
 	updateObj = append(updateObj, bson.E{Key: "updated_at", Value: Updated_at})
 
 	upsert := true
-	filter := bson.M{"user id": userId}
+	filter := bson.M{"user_id": userId}
 	opt := options.UpdateOptions{
 		Upsert: &upsert,
 	}

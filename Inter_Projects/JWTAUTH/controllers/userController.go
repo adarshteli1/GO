@@ -5,6 +5,7 @@ import (
 	"JWTAUTH/helpers"
 	"JWTAUTH/models"
 	"context"
+	"fmt"
 	"log"
 	"net/http"
 	"strconv"
@@ -29,7 +30,7 @@ func HashPassword(password string) string {
 	return string(bytes)
 }
 func VerifyPassword(userPassword string, providedPassword string) (bool, string) {
-	err := bcrypt.CompareHashAndPassword([]byte(providedPassword), []byte(userPassword))
+	err := bcrypt.CompareHashAndPassword([]byte(userPassword), []byte(providedPassword))
 	check := true
 	msg := ""
 	if err != nil {
@@ -52,20 +53,21 @@ func Login() gin.HandlerFunc {
 		}
 		err := userCollection.FindOne(ctx, bson.M{"email": user.Email}).Decode(&foundUser)
 		if err != nil {
+			fmt.Printf("Login mail: %v\n", user.Email)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Email or Password is incorrect"})
 			return
 		}
-		passwordIsValid, msg := VerifyPassword(*user.Password, *foundUser.Password)
+		passwordIsValid, msg := VerifyPassword(*foundUser.Password, *user.Password)
 		defer cancel()
 		if passwordIsValid != true {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
 			return
 		}
-		if foundUser.Email == nil {
+		if foundUser.Email == "" {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "user not found"})
 		}
 
-		token, refreshToken, err := helpers.GenerateAllTokens(*foundUser.Email, *foundUser.First_name, *foundUser.Last_name, *foundUser.User_type, foundUser.User_id)
+		token, refreshToken, err := helpers.GenerateAllTokens(foundUser.Email, *foundUser.First_name, *foundUser.Last_name, foundUser.User_id, *foundUser.User_type)
 		helpers.UpdateAllTokens(token, refreshToken, foundUser.User_id)
 		err = userCollection.FindOne(ctx, bson.M{"user_id": foundUser.User_id}).Decode(&foundUser)
 
@@ -115,7 +117,7 @@ func Signup() gin.HandlerFunc {
 		user.Updated_at, err = time.Parse(time.RFC3339, time.Now().Format(time.RFC3339))
 		user.ID = primitive.NewObjectID()
 		user.User_id = user.ID.Hex()
-		token, refreshToken, err := helpers.GenerateAllTokens(*user.Email, *user.First_name, *user.Last_name, *user.User_type, user.User_id)
+		token, refreshToken, err := helpers.GenerateAllTokens(user.Email, *user.First_name, *user.Last_name, user.User_id, *user.User_type)
 
 		user.Token = &token
 		user.Refresh_token = &refreshToken
@@ -139,6 +141,7 @@ func GetUsers() gin.HandlerFunc {
 			return
 		}
 		var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
+		defer cancel()
 
 		recordPerPage, err := strconv.Atoi(c.Query("recordPerPage"))
 		if err != nil || recordPerPage < 1 {
@@ -149,7 +152,6 @@ func GetUsers() gin.HandlerFunc {
 			page = 1
 		}
 		startIndex := (page - 1) * recordPerPage
-		startIndex, err = strconv.Atoi(c.Query("startIndex"))
 
 		matchStage := bson.D{
 			{Key: "$match", Value: bson.D{}},
@@ -178,10 +180,9 @@ func GetUsers() gin.HandlerFunc {
 		}
 		result, err := userCollection.Aggregate(ctx, mongo.Pipeline{
 			matchStage,
-			projectStage,
 			groupStage,
+			projectStage,
 		})
-		defer cancel()
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err})
 		}
@@ -198,16 +199,16 @@ func GetUser() gin.HandlerFunc {
 		userId := c.Param("user_id")
 
 		if err := helpers.MatchUserTypeToUid(c, userId); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error})
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
 		var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
 
 		var user models.User
-		err := userCollection.FindOne(ctx, bson.M{"user_id": userId})
+		err := userCollection.FindOne(ctx, bson.M{"user_id": userId}).Decode(&user)
 		defer cancel()
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Err().Error()})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
 		c.JSON(http.StatusOK, user)

@@ -1,0 +1,3 @@
+p, ADMIN, /notes, POST
+p, ADMIN, /notes, GET
+p, USER, /notes, GET

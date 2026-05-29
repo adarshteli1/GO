@@ -3,10 +3,14 @@ package main
 import (
 	"log"
 	"os"
+	"restaurant_management/database"
 
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
+	"go.mongodb.org/mongo-driver/mongo"
 )
+
+var foodCollection *mongo.Collection = database.OpenCollection(database.Client, "food")
 
 func main() {
 	err := godotenv.Load(".env")
@@ -31,4 +35,5 @@ func main() {
 	routes.TableRoutes(router)
 	routes.UserRoutes(router)
 
+	router.Run(":" + port)
 }
